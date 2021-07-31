@@ -2,10 +2,8 @@ use image::EncodableLayout;
 use lab::Lab;
 use rumqttc::{AsyncClient, MqttOptions};
 
-fn get_average_color(frame: &[u8]) -> [u8; 3] {
-    let colors = lab::rgb_bytes_to_labs(frame.as_bytes());
-
-    let mut summed_colors = colors.iter().fold(
+fn get_average_color(pixels: impl Iterator<Item = [u8; 3]>) -> [u8; 3] {
+    let mut summed_colors = pixels.map(Lab::from_rgb).fold(
         Lab {
             l: 0.,
             a: 0.,
@@ -32,13 +30,26 @@ fn get_average_color(frame: &[u8]) -> [u8; 3] {
 }
 
 fn get_color_stream() -> impl Iterator<Item = [u8; 3]> {
-    camera_capture::create(0)
+    let mut camera = rscam::new("/dev/video0").unwrap();
+
+    camera
+        .start(&rscam::Config {
+            interval: (1, 30),
+            resolution: (1280, 720),
+            format: b"MJPG",
+            ..Default::default()
+        })
+        .unwrap();
+
+    let colors = image::load_from_memory(camera.capture().unwrap())
         .unwrap()
-        .fps(5.0)
-        .unwrap()
-        .start()
-        .unwrap()
-        .map(|frame| get_average_color(frame.as_bytes()))
+        .to_rgb8()
+        .pixels()
+        .map(|rgb| lab::Lab::from_rgb(rgb.0));
+
+    let frames = std::iter::repeat_with(|| camera.capture().unwrap());
+
+    frame.map(|frame| get_average_color(frame.as_bytes()))
 }
 
 #[tokio::main]
