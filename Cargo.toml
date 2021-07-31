@@ -5,12 +5,10 @@ edition = "2018"
 
 [dependencies]
 camera_capture = "0.5.0"
-escapi = "4.0.0"
 hex = "0.4.3"
 image = "0.23.14"
 itertools = "0.10.1"
 lab = "0.10.0"
-piston_window = "0.120.0"
 rumqttc = "0.8.0"
 tokio = { version = "1.0", features = ["full"] }
 
